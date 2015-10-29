@@ -135,14 +135,19 @@ func (self *realPodsApi) List(nodeList *nodes.NodeList) ([]api.Pod, error) {
 			if err != nil {
 				return []api.Pod{}, err
 			}
+			var ns *kapi.Namespace
+			var ok bool			
 			if !exists {
-				glog.V(2).Infof("Ignoring pod %s with namespace %s since namespace object was not found", pod.Name, pod.Namespace)
-				continue
-			}
-			ns, ok := nsObj.(*kapi.Namespace)
-			if !ok {
-				glog.V(2).Infof("Ignoring pod %s with namespace %s since casting to namespace object failed - %T, %v", pod.Name, pod.Namespace, ns, ns)
-				continue
+				//glog.V(2).Infof("Ignoring pod %s with namespace %s since namespace object was not found", pod.Name, pod.Namespace)
+				glog.V(2).Infof("The namespace %s for  %s  was not found, will create a fake one ", pod.Namespace, pod.Name)				
+				ns = & kapi.Namespace {}
+				ns.Name = pod.Namespace
+			}else {
+				ns, ok = nsObj.(*kapi.Namespace)
+				if !ok {
+					glog.V(2).Infof("Ignoring pod %s with namespace %s since casting to namespace object failed - %T, %v", pod.Name, pod.Namespace, ns, ns)
+					continue
+				}
 			}
 			selectedPods = append(selectedPods, podNodePair{pods[i], &nodeInfo, ns})
 		} else {

@@ -37,6 +37,7 @@ type kubePodsSource struct {
 
 const (
 	KubePodsSourceName = "Kube Pods Source"
+	PodInfraContainerName = "POD"
 )
 
 func NewKubePodMetrics(kubeletPort int, kubeletApi datasource.Kubelet, nodesApi nodes.NodesApi, podsApi podsApi) api.Source {
@@ -119,6 +120,16 @@ func (self *kubePodsSource) getPodInfo(nodeList *nodes.NodeList, start, end time
 				pod.Containers[index].ExternalID = pod.ExternalID
 				pod.Containers[index].Spec.ContainerSpec = rawContainer.Spec.ContainerSpec
 				pod.Containers[index].Stats = rawContainer.Stats
+			}
+			//export the POD metrics for network traffic
+			podInfraContainer, err := self.getStatsFromKubelet(pod, PodInfraContainerName, start, end)
+			if err != nil {
+				glog.V(2).Infof("Failed to get stats for infraContainer in pod %q",pod.Name)
+			}else if podInfraContainer != nil {
+				podInfraContainer.Name = PodInfraContainerName
+				podInfraContainer.Hostname = pod.Hostname
+				podInfraContainer.ExternalID = pod.ExternalID				
+				pod.Containers = append(pod.Containers, *podInfraContainer)	
 			}
 		}(&pods[index])
 	}
